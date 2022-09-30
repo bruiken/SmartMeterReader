@@ -29,7 +29,10 @@ class SmartReader:
     @staticmethod
     def read_one_line(conn: serial.Serial) -> str:
         if conn.isOpen():
-            return conn.readline().decode('ascii')
+            line_bytes = conn.readline()
+            line_ascii = line_bytes.decode('ascii')
+            line_cleaned = line_ascii.strip('\r\n')
+            return line_cleaned
         else:
             raise ConnectionIsClosedException()
 
@@ -45,10 +48,11 @@ class SmartReader:
 
     def read_one_telegram(self) -> str:
         with self.open_serial_connection() as conn:
-            SmartReader.scroll_to_start()
+            SmartReader.scroll_to_start(conn)
             line = SmartReader.read_one_line(conn)
             while not line.startswith('!'):
                 print(line)
+                line = SmartReader.read_one_line(conn)
 
 
 if __name__ == '__main__':
