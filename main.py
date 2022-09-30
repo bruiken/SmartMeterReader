@@ -34,12 +34,18 @@ class SmartMeterData:
     last_gas_reading: float
     utc_timestamp: str = field(init=False)
     utc_timestamp_gas: str = field(init=False)
+    kw_usage_total: float = field(init=False)
+    kw_generated_total: float = field(init=False)
 
     def __post_init__(self):
-        local_timestamp = datetime.strptime(self.timestamp[:-1], '%y%m%d%H%M%S', tzinfo=LOCAL_TIMEZONE)
+        local_timestamp = datetime.strptime(self.timestamp[:-1], '%y%m%d%H%M%S')
+        local_timestamp = local_timestamp.replace(tzinfo=LOCAL_TIMEZONE)
         self.utc_timestamp = str(local_timestamp.astimezone(UTC_TIMEZONE))
-        local_timestamp_gas = datetime.strptime(self.timestamp_gas[:-1], '%y%m%d%H%M%S', tzinfo=LOCAL_TIMEZONE)
+        local_timestamp_gas = datetime.strptime(self.timestamp_gas[:-1], '%y%m%d%H%M%S')
+        local_timestamp_gas = local_timestamp_gas.replace(tzinfo=LOCAL_TIMEZONE)
         self.utc_timestamp_gas = str(local_timestamp_gas.astimezone(UTC_TIMEZONE))
+        self.kw_usage_total = self.kw_usage_phase1 + self.kw_usage_phase2 + self.kw_usage_phase3
+        self.kw_generated_total = self.kw_generated_phase1 + self.kw_generated_phase2 + self.kw_generated_phase3
 
 
 IDENTIFIER_MAPPING = {
@@ -47,14 +53,15 @@ IDENTIFIER_MAPPING = {
     '1-0:1.8.1': 'kwh_to_client_t1',
     '1-0:1.8.2': 'kwh_to_client_t2',
     '1-0:2.8.1': 'kwh_from_client_t1',
+    '1-0:2.8.2': 'kwh_from_client_t2',
     '1-0:1.7.0': 'kw_to_client',
     '1-0:2.7.0': 'kw_from_client',
-    '1-0:21:7.0': 'kw_usage_phase1',
-    '1-0:41:7.0': 'kw_usage_phase2',
-    '1-0:61:7.0': 'kw_usage_phase3',
-    '1-0:22:7.0': 'kw_generated_phase1',
-    '1-0:42:7.0': 'kw_generated_phase2',
-    '1-0:62:7.0': 'kw_generated_phase3',
+    '1-0:21.7.0': 'kw_usage_phase1',
+    '1-0:41.7.0': 'kw_usage_phase2',
+    '1-0:61.7.0': 'kw_usage_phase3',
+    '1-0:22.7.0': 'kw_generated_phase1',
+    '1-0:42.7.0': 'kw_generated_phase2',
+    '1-0:62.7.0': 'kw_generated_phase3',
     'GAS_DATA': '0-1:24.2.1',
 }
 
@@ -136,6 +143,8 @@ class SmartReader:
 if __name__ == '__main__':
     reader = SmartReader('config.json')
     data = reader.read_telegram()
-    print(data.timestamp)
-    print('kW delivered:', data.kw_to_client)
-    print('kW generated:', data.kw_from_client)
+    print(data.utc_timestamp)
+    print('kW usage', data.kw_usage_total)
+    print('kW generated', data.kw_generated_total)
+    print('kW -> in', data.kw_to_client)
+    print('kW -> out', data.kw_from_client)
