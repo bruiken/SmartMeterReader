@@ -8,8 +8,7 @@ from zoneinfo import ZoneInfo
 
 REGEX_SINGLE_VAL = re.compile(r'^(?P<id>\d-\d:\d+\.\d+\.\d+)\((?P<data>[^\)]+)\)$')
 REGEX_DOUBLE_VAL = re.compile(r'^(?P<id>\d-\d:\d+\.\d+\.\d+)\((?P<fdata>[^\)]+)\)\((?P<sdata>[^\)]+)\)$')
-LOCAL_TIMEZONE = ZoneInfo('Europe/Amsterdam')
-UTC_TIMEZONE = ZoneInfo('UTC')
+
 
 class ConnectionIsClosedException(Exception):
     pass
@@ -32,20 +31,18 @@ class SmartMeterData:
     kw_generated_phase3: float
     timestamp_gas: str
     last_gas_reading: float
-    utc_timestamp: str = field(init=False)
-    utc_timestamp_gas: str = field(init=False)
+    utc_timestamp: datetime = field(init=False)
+    utc_timestamp_gas: datetime = field(init=False)
     kw_usage_total: float = field(init=False)
     kw_generated_total: float = field(init=False)
 
     def __post_init__(self):
-        local_timestamp = datetime.strptime(self.timestamp[:-1], '%y%m%d%H%M%S')
-        local_timestamp = local_timestamp.replace(tzinfo=LOCAL_TIMEZONE)
-        self.utc_timestamp = str(local_timestamp.astimezone(UTC_TIMEZONE))
-        local_timestamp_gas = datetime.strptime(self.timestamp_gas[:-1], '%y%m%d%H%M%S')
-        local_timestamp_gas = local_timestamp_gas.replace(tzinfo=LOCAL_TIMEZONE)
-        self.utc_timestamp_gas = str(local_timestamp_gas.astimezone(UTC_TIMEZONE))
-        self.kw_usage_total = self.kw_usage_phase1 + self.kw_usage_phase2 + self.kw_usage_phase3
-        self.kw_generated_total = self.kw_generated_phase1 + self.kw_generated_phase2 + self.kw_generated_phase3
+        self.utc_timestamp = SmartReader.convert_time(self.timestamp)
+        self.utc_timestamp_gas = SmartReader.convert_time(self.timestamp_gas)
+        self.kw_usage_total = self.kw_usage_phase1 + self.kw_usage_phase2 + \
+            self.kw_usage_phase3
+        self.kw_generated_total = self.kw_generated_phase1 + \
+            self.kw_generated_phase2 + self.kw_generated_phase3
 
 
 IDENTIFIER_MAPPING = {
@@ -67,14 +64,26 @@ IDENTIFIER_MAPPING = {
 
 
 class SmartReader:
+    utc_timezone = ZoneInfo('UTC')
+    local_timezone: ZoneInfo
+
     def __init__(self, config_path: str):
         self.config = SmartReader.read_config(config_path)
+        local_tz = self.config.get('timezone', 'Europe/Amsterdam')
+        self.local_timezone = ZoneInfo(local_tz)
 
     @staticmethod
     def read_config(config_path: str) -> dict:
         with open(config_path) as file:
             config_str = file.read()
             return json.loads(config_str)
+
+    @staticmethod
+    def convert_time(other: str) -> datetime:
+        local_tz = SmartReader.local_timezone
+        local_timestamp = datetime.strptime(other[:-1], '%y%m%d%H%M%S')
+        local_timestamp = local_timestamp.replace(tzinfo=local_tz)
+        return local_timestamp.astimezone(SmartReader.UTC_TIMEZONE)
 
     def open_serial_connection(self) -> serial.Serial:
         return serial.Serial(
@@ -106,21 +115,27 @@ class SmartReader:
         else:
             raise ConnectionIsClosedException()
 
-    def read_telegram_lines(self) -> list:
-        with self.open_serial_connection() as conn:
-            line = SmartReader.scroll_to_start(conn)
-            datalines = [line]
-            line = SmartReader.read_one_line(conn)
-            while not line.startswith('!'):
-                datalines.append(line)
-                line = SmartReader.read_one_line(conn)
+    def read_telegram_lines(self, conn: serial.Serial) -> list:
+        line = SmartReader.scroll_to_start(conn)
+        datalines = [line]
+        line = SmartReader.read_one_line(conn)
+        while not line.startswith('!'):
             datalines.append(line)
+            line = SmartReader.read_one_line(conn)
+        datalines.append(line)
         return datalines
 
-    def read_telegram(self) -> SmartMeterData:
-        data_lines = self.read_telegram_lines()
-        return self.parse_telegram(data_lines)
-    
+    def read_telegrams(self) -> SmartMeterData:
+        with self.open_serial_connection() as conn:
+            while True:
+                data_lines = self.read_telegram_lines(conn)
+                data = self.parse_telegram(data_lines)
+                print(data.utc_timestamp)
+                print('kW usage', data.kw_usage_total)
+                print('kW generated', data.kw_generated_total)
+                print('kW -> in', data.kw_to_client)
+                print('kW -> out', data.kw_from_client)
+
     def parse_telegram(self, data_lines: list) -> SmartMeterData:
         full_data = dict()
         for line in data_lines:
@@ -142,9 +157,4 @@ class SmartReader:
 
 if __name__ == '__main__':
     reader = SmartReader('config.json')
-    data = reader.read_telegram()
-    print(data.utc_timestamp)
-    print('kW usage', data.kw_usage_total)
-    print('kW generated', data.kw_generated_total)
-    print('kW -> in', data.kw_to_client)
-    print('kW -> out', data.kw_from_client)
+    reader.read_telegrams()
