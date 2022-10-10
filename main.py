@@ -6,6 +6,7 @@ import re
 from zoneinfo import ZoneInfo
 import time
 import os
+import sys
 
 
 REGEX_SINGLE_VAL = re.compile(r'^(?P<id>\d-\d:\d+\.\d+\.\d+)\((?P<data>[^\)]+)\)$')
@@ -168,5 +169,8 @@ class SmartReader:
 
 
 if __name__ == '__main__':
-    reader = SmartReader('config.json')
+    configfile = 'config.json'
+    if len(sys.argv) == 2:
+        configfile = sys.argv[1]
+    reader = SmartReader(configfile)
     reader.read_telegrams()
