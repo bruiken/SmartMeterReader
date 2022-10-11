@@ -43,8 +43,7 @@ class DataCollector:
         )
     
     def meter_data_callback(self, datagram):
-        if self.rmq_channel.consumer_tags:
-            self.report_electricity_rabbitmq(datagram)
+        self.report_electricity_rabbitmq(datagram)
 
     def start_reading(self):
         try:
