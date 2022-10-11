@@ -41,11 +41,15 @@ class DataCollector:
             routing_key=f'{loc_id}.electricity',
             body=json.dumps(data)
         )
+    
+    def meter_data_callback(self, datagram):
+        if self.rmq_channel.consumer_tags:
+            self.report_electricity_rabbitmq(datagram)
 
     def start_reading(self):
         try:
             self.smartreader.read_telegrams(
-                callback_func=self.report_electricity_rabbitmq
+                callback_func=self.meter_data_callback
             )
         except Exception as ex:
             if self.rmq_conn.is_open:
