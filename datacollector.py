@@ -27,7 +27,7 @@ class DataCollector:
         channel = connection.channel()
         channel.exchange_declare(
             exchange=self.config['rabbitmq_exchange'],
-            exchange_type='direct')
+            exchange_type='topic')
         return connection, channel
 
     def report_electricity_rabbitmq(self, datagram):

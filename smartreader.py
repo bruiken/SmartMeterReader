@@ -42,8 +42,10 @@ class SmartMeterData:
         self.utc_timestamp_gas = SmartReader.convert_time(self.timestamp_gas)
         self.kw_usage_total = self.kw_usage_phase1 + self.kw_usage_phase2 + \
             self.kw_usage_phase3
+        self.kw_usage_total = round(self.kw_usage_total, 3)
         self.kw_generated_total = self.kw_generated_phase1 + \
             self.kw_generated_phase2 + self.kw_generated_phase3
+        self.kw_generated_total = round(self.kw_generated_total, 3)
 
 
 IDENTIFIER_MAPPING = {
