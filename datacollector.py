@@ -34,8 +34,10 @@ class DataCollector:
         data = {
             'kw_usage': datagram.kw_usage_total,
             'kw_generated': datagram.kw_generated_total,
+            'time': datagram.utc_timestamp,
         }
         loc_id = self.config['location_id']
+        self.rmq_conn.process_data_events()
         self.rmq_channel.basic_publish(
             self.config['rabbitmq_exchange'],
             routing_key=f'{loc_id}.electricity',
