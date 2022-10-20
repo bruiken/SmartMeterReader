@@ -131,6 +131,7 @@ class SmartReader:
     def read_telegrams(self, callback_func) -> SmartMeterData:
         with self.open_serial_connection() as conn:
             while True:
+                conn.flushInput()
                 data_lines = self.read_telegram_lines(conn)
                 data = self.parse_telegram(data_lines)
                 callback_func(data)
