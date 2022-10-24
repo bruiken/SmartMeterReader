@@ -65,10 +65,11 @@ class DataCollector:
             'GasReadout': datagram.last_gas_reading,
             'Time': datagram.time_utc
         }
+        json_data = json.dumps(data, default=str)
         headers = {
             'Authentication': f'Bearer {token}'
         }
-        r = requests.post(url, json=data, headers=headers)
+        r = requests.post(url, data=json_data, headers=headers)
         if r.status_code == 200:
             self.latest_api_report = new_time
 
