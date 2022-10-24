@@ -44,7 +44,7 @@ class DataCollector:
         self.rmq_channel.basic_publish(
             self.config['rabbitmq_exchange'],
             routing_key=f'{loc_id}.electricity',
-            body=json.dumps(data)
+            body=json.dumps(data, default=str)
         )
 
     def should_report_electricity_api(self):
