@@ -63,7 +63,7 @@ class DataCollector:
             'KwhOutT1': datagram.kwh_from_client_t1,
             'KwhOutT2': datagram.kwh_from_client_t2,
             'GasReadout': datagram.last_gas_reading,
-            'Time': datagram.time_utc
+            'Time': datagram.utc_timestamp
         }
         json_data = json.dumps(data, default=str)
         headers = {
