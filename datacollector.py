@@ -1,6 +1,8 @@
 from smartreader import SmartReader
 import pika
 import json
+import datetime
+import requests
 
 
 class DataCollector:
@@ -8,6 +10,7 @@ class DataCollector:
         self.config = DataCollector.read_config(config_path)
         self.smartreader = SmartReader(config_path)
         self.rmq_conn, self.rmq_channel = self.create_rabbitmq_connection()
+        self.latest_api_report = datetime.datetime.min
 
     @staticmethod
     def read_config(config_path: str) -> dict:
@@ -43,9 +46,36 @@ class DataCollector:
             routing_key=f'{loc_id}.electricity',
             body=json.dumps(data)
         )
-    
+
+    def should_report_electricity_api(self):
+        utcnow = datetime.datetime.utcnow()
+        seconds_between_reports = self.config.get('report_api_seconds', 300)
+        timedelta = datetime.timedelta(seconds=seconds_between_reports)
+        return utcnow - timedelta >= self.latest_api_report
+
+    def report_electricity_api(self, datagram):
+        new_time = datetime.datetime.utcnow()
+        url = self.config['api_url']
+        token = self.config['jwt_token']
+        data = {
+            'KwhInT1': datagram.kwh_to_client_t1,
+            'KwhInT2': datagram.kwh_to_client_t2,
+            'KwhOutT1': datagram.kwh_from_client_t1,
+            'KwhOutT2': datagram.kwh_from_client_t2,
+            'GasReadout': datagram.last_gas_reading,
+            'Time': datagram.time_utc
+        }
+        headers = {
+            'Authentication': f'Bearer {token}'
+        }
+        r = requests.post(url, json=data, headers=headers)
+        if r.status_code == 200:
+            self.latest_api_report = new_time
+
     def meter_data_callback(self, datagram):
         self.report_electricity_rabbitmq(datagram)
+        if self.should_report_electricity_api():
+            self.report_electricity_api(datagram)
 
     def start_reading(self):
         try:
