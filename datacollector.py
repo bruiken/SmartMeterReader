@@ -23,6 +23,7 @@ class DataCollector:
             pika.ConnectionParameters(
                 host=self.config['rabbitmq_host'],
                 port=self.config['rabbitmq_port'],
+                virtual_host=self.config['rabbitmq_vhost'],
                 credentials=pika.PlainCredentials(
                     username=self.config['rabbitmq_username'],
                     password=self.config['rabbitmq_password']
