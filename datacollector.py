@@ -64,11 +64,12 @@ class DataCollector:
             'KwhOutT1': datagram.kwh_from_client_t1,
             'KwhOutT2': datagram.kwh_from_client_t2,
             'GasReadout': datagram.last_gas_reading,
-            'Time': datagram.utc_timestamp
+            'Time': datagram.utc_timestamp.isoformat()
         }
         json_data = json.dumps(data, default=str)
         headers = {
-            'Authentication': f'Bearer {token}'
+            'Authentication': f'Bearer {token}',
+            'Content-Type': 'application/json'
         }
         r = requests.post(url, data=json_data, headers=headers)
         if r.status_code == 200:
