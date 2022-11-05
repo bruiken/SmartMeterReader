@@ -24,18 +24,18 @@ class SmartMeterData:
     kw_to_client: float
     kw_from_client: float
     kw_usage_phase1: float
-    kw_usage_phase2: float
-    kw_usage_phase3: float
     kw_generated_phase1: float
-    kw_generated_phase2: float
-    kw_generated_phase3: float
     timestamp_gas: str
     last_gas_reading: float
+    kw_usage_phase2: float = field(default=0)
+    kw_usage_phase3: float = field(default=0)
+    kw_generated_phase2: float = field(default=0.)
+    kw_generated_phase3: float = field(default=0.)
     utc_timestamp: datetime = field(init=False)
     utc_timestamp_gas: datetime = field(init=False)
     kw_usage_total: float = field(init=False)
     kw_generated_total: float = field(init=False)
-    TOTAL_ATTRS: float = field(default=15, init=False)
+    MIN_TOTAL_ATTRS: float = field(default=11, init=False)
 
     def __post_init__(self):
         self.utc_timestamp = SmartReader.convert_time(self.timestamp)
@@ -152,5 +152,5 @@ class SmartReader:
                     float_data = float(data2.split('*')[0])
                     full_data['timestamp_gas'] = data1
                     full_data['last_gas_reading'] = float_data
-        if len(full_data) == SmartMeterData.TOTAL_ATTRS:
+        if len(full_data) >= SmartMeterData.MIN_TOTAL_ATTRS:
             return SmartMeterData(**full_data)
